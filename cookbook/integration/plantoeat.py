@@ -21,6 +21,11 @@ class Plantoeat(Integration):
         description = ''
         for line in file.replace('\r', '').split('\n'):
             if line.strip() != '':
+                if 'Ingredients:' in line:
+                    ingredient_mode = True
+                if 'Directions:' in line:
+                    ingredient_mode = False
+                    direction_mode = True
                 if 'Title:' in line:
                     title = line.replace('Title:', '').replace('"', '').strip()
                 if 'Description:' in line:
@@ -37,11 +42,6 @@ class Plantoeat(Integration):
                 if direction_mode:
                     if len(line) > 2:
                         directions.append(line.strip() + '\n')
-                if 'Ingredients:' in line:
-                    ingredient_mode = True
-                if 'Directions:' in line:
-                    ingredient_mode = False
-                    direction_mode = True
 
         recipe = Recipe.objects.create(name=title, description=description, created_by=self.request.user, internal=True, space=self.request.space)
 

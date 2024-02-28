@@ -4,6 +4,7 @@ import requests
 import validators
 
 from cookbook.helper.ingredient_parser import IngredientParser
+from cookbook.helper.recipe_url_import import  parse_time
 from cookbook.integration.integration import Integration
 from cookbook.models import Ingredient, Keyword, Recipe, Step
 
@@ -19,6 +20,10 @@ class Plantoeat(Integration):
         ingredients = []
         directions = []
         description = ''
+        source_url = None
+        servings = None
+        prep_time = None
+        cook_time = None
         for line in file.replace('\r', '').split('\n'):
             if line.strip() != '':
                 if 'Ingredients:' in line:
@@ -30,8 +35,14 @@ class Plantoeat(Integration):
                     title = line.replace('Title:', '').replace('"', '').strip()
                 if 'Description:' in line:
                     description = line.replace('Description:', '').strip()
-                if 'Source:' in line or 'Serves:' in line or 'Prep Time:' in line or 'Cook Time:' in line:
-                    directions.append(line.strip() + '\n')
+                if 'Source:' in line:
+                    source_url = line.replace('Source:', '').strip()
+                if 'Serves:' in line:
+                    servings = line.replace('Serves:', '').strip()
+                if 'Prep Time:' in line:
+                    prep_time = line.replace('Prep Time:', '').strip()
+                if 'Cook Time:' in line:
+                    cook_time = line.replace('Cook Time:', '').strip()
                 if 'Photo Url:' in line:
                     image_url = line.replace('Photo Url:', '').strip()
                 if 'Tags:' in line:
@@ -73,6 +84,23 @@ class Plantoeat(Integration):
                     self.import_recipe_image(recipe, BytesIO(response.content))
             except Exception as e:
                 print('failed to import image ', str(e))
+
+        if source_url:
+            recipe.source_url = source_url
+
+        iso_mapping = [('Hr','H'), ('Min','M'), (' ','')]
+        if prep_time:
+            for k, v in iso_mapping:
+                prep_time = prep_time.replace(k, v)
+            recipe.working_time = parse_time('P' + prep_time)
+
+        if cook_time:
+            for k, v in iso_mapping:
+                cook_time = cook_time.replace(k, v)
+            recipe.waiting_time = parse_time('P' + cook_time)
+
+        if servings:
+            recipe.servings = servings
 
         return recipe
 
